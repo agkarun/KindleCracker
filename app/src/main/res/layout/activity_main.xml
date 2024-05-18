@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:id="@+id/rootView">
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+
+        <TextView
+            android:id="@+id/note"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_margin="@dimen/NoteTextMarg"
+            android:text="@string/CoordNote"
+            android:textColor="#ff1c21"
+            android:textSize="@dimen/NoteTextSize" />
+
+        <LinearLayout
+            android:layout_centerInParent="true"
+            android:id="@+id/coord"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/note"
+            android:layout_margin="20dp"
+            android:orientation="horizontal">
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/Coordlay"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/Xcoord"
+                    android:layout_width="@dimen/Coordinpwid"
+                    android:layout_height="@dimen/Coordinpheight"
+                    android:gravity="center"
+                    android:hint="@string/X"
+                    android:inputType="number" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/Ycoord"
+                    android:layout_width="@dimen/Coordinpwid"
+                    android:layout_height="@dimen/Coordinpheight"
+                    android:layout_marginStart="@dimen/MarginXY"
+                    android:layout_marginLeft="@dimen/MarginXY"
+                    android:gravity="center"
+                    android:hint="@string/Y"
+                    android:inputType="number" />
+            </com.google.android.material.textfield.TextInputLayout>
+        </LinearLayout>
+
+
+        <LinearLayout
+            android:id="@+id/info"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/coord"
+            android:layout_margin="20dp"
+            android:orientation="vertical">
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/infolay"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="@dimen/LayMarg"
+                android:gravity="center_horizontal"
+                android:orientation="vertical">
+
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/filename"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/Coordinpheight"
+                    android:hint="@string/DestFolder"
+                    android:maxLines="1"
+                    android:singleLine="true" />
+
+            </com.google.android.material.textfield.TextInputLayout>
+
+
+            <com.google.android.material.textfield.TextInputLayout
+
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="@dimen/LayMarg"
+                android:gravity="center_horizontal"
+                android:orientation="vertical">
+
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/pages"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/Coordinpheight"
+                    android:hint="@string/Page"
+                    android:inputType="number" />
+
+            </com.google.android.material.textfield.TextInputLayout>
+
+
+            <com.google.android.material.textfield.TextInputLayout
+
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="@dimen/LayMarg"
+                android:gravity="center_horizontal"
+                android:orientation="vertical">
+
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/preptime"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/Coordinpheight"
+                    android:hint="@string/PrepTime"
+                    android:inputType="number" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/continuetextLay"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="@dimen/LayMarg"
+                android:gravity="center_horizontal"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/continuepage"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/Coordinpheight"
+                    android:hint="From which page number ?"
+                    android:inputType="number" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/compresspdfLay"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="@dimen/LayMarg"
+                android:gravity="center_horizontal"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/compresspdf"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/Coordinpheight"
+                    android:hint="% of compression (0 to 100)"
+                    android:inputType="number" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <CheckBox
+                android:id="@+id/continuechkbox"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/continuechkBox" />
+            <CheckBox
+                android:id="@+id/compresschkbox"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/compresschkBox" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/info"
+            android:gravity="center_horizontal"
+            android:orientation="horizontal">
+
+            <Button
+                android:textColor="#FFFFFF"
+                android:id="@+id/convertbtn"
+                android:layout_width="wrap_content"
+                android:layout_height="@dimen/BtnHeight"
+                android:layout_margin="10dp"
+                android:layout_marginTop="@dimen/MartopInp"
+                android:text="@string/CrackBtn"
+                android:theme="@style/startStyle"/>
+
+            <Button
+                android:textColor="#FFFFFF"
+                android:id="@+id/stopConvertbtn"
+                android:layout_width="wrap_content"
+                android:layout_height="@dimen/BtnHeight"
+                android:layout_margin="10dp"
+                android:layout_marginTop="@dimen/MartopInp"
+                android:text="@string/StopBtn"
+                android:theme="@style/stopStyle"/>
+        </LinearLayout>
+    </RelativeLayout>
+
+</ScrollView>

@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+
+    <TextView
+        android:id="@+id/name"
+        android:textColor="#758c8c"
+        android:textSize="50sp"
+        android:layout_marginTop="50dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/app_name"
+        android:gravity="center"/>
+    <TextView
+        android:textSize="30dp"
+        android:gravity="center_horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="V 1.0"/>
+    <TextView
+        android:layout_marginTop="15dp"
+        android:gravity="center_horizontal"
+        android:textSize="18sp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/aboutdev"/>
+
+    <TextView
+        android:layout_marginTop="5dp"
+        android:gravity="center_horizontal"
+        android:textSize="16sp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/email"/>
+
+
+    <TextView
+        android:id="@+id/git"
+        android:layout_marginTop="5dp"
+        android:gravity="center_horizontal"
+        android:textSize="16sp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/source"/>
+
+    <TextView
+        android:textColor="#504d4d"
+        android:layout_marginTop="40dp"
+        android:gravity="center_horizontal"
+        android:textSize="20sp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/libtitle"/>
+
+    <TextView
+        android:textColor="#504d4d"
+        android:layout_marginTop="10dp"
+        android:gravity="center_horizontal"
+        android:textSize="16sp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="itextpdf"/>
+
+    <TextView
+        android:textColor="#504d4d"
+        android:layout_marginTop="10dp"
+        android:gravity="center_horizontal"
+        android:textSize="16sp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="libsuperuser"/>
+
+</LinearLayout>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="NoteTextSize">15sp</dimen>
+    <dimen name="NoteTextMarg">10dp</dimen>
+    <dimen name="MartopCoord">50dp</dimen>
+    <dimen name="LayMarg">10dp</dimen>
+    <dimen name="Coordinpwid">150dp</dimen>
+    <dimen name="Coordinpheight">70dp</dimen>
+    <dimen name="MarginXY">25dp</dimen>
+    <dimen name="MartopInp">10dp</dimen>
+    <dimen name="BtnHeight">55dp</dimen>
+</resources>
