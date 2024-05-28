@@ -6,21 +6,21 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.media.projection.MediaProjection;
 import android.media.projection.MediaProjectionManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
-import android.view.Display;
+import android.os.Environment;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.Toast;
 
-import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
@@ -40,21 +40,20 @@ public class MainActivity extends AppCompatActivity {
     private CheckBox continueChkbox, compressCheckbox;
     private Button startButton, stopBtn;
     private int x, y, time, totalPages, fromPage, compress;
-    private String destFolder = "KindleCracker";
+    public static final String destFolder = "/Documents/KindleCracker/";
     private static final int STORAGE_PERMISSION_CODE = 1;
     private static final int SCREENCAPTURE_PERMISSION_CODE = 2;
-    private File sShotfolder;
     private File mergedFolder;
     private String fileName;
     private View snackView;
     private SharedPreferences preferences;
-    public static MediaProjection projection;
-    public static Display display;
+    private boolean isfromPage, isCompress;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        // Initializing variables while starting
         xCoord = findViewById(R.id.Xcoord);
         yCoord = findViewById(R.id.Ycoord);
         file = findViewById(R.id.filename);
@@ -69,14 +68,16 @@ public class MainActivity extends AppCompatActivity {
         continueLay = findViewById(R.id.continuetextLay);
         compressLay = findViewById(R.id.compresspdfLay);
         snackView = findViewById(R.id.rootView);
+        // Checking if EULA is already accepted or not
         preferences = getSharedPreferences("EULA", MODE_PRIVATE);
 
         if (preferences.getBoolean("NOTAGREED", true)) {
             showEULA();
         }
-
+        // Requesting Storage and Screen Record Permission
         requestStoragePermission();
 
+        // Checkbox used to make visibile text field for getting from page number
         continueChkbox.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -88,6 +89,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        // Checkbox used to make visibile text field for getting from page number
         compressCheckbox.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -105,6 +107,7 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View v) {
 
                 if (getValues()) {
+                    // Start converting from already converted PDF file
                     if (continueChkbox.isChecked() && !compressCheckbox.isChecked()) {
                         if (pageContinue.getText().toString().trim().length() <= 0 ||
                                 pageContinue.getText().toString().trim().contentEquals("0")) {
@@ -115,7 +118,7 @@ public class MainActivity extends AppCompatActivity {
                             startConvertingService(true, false);
                         }
                     }
-
+                    // Start converting new PDF
                     if (!continueChkbox.isChecked() && compressCheckbox.isChecked()) {
                         if (compressPDF.getText().toString().trim().length() <= 0 ||
                                 compressPDF.getText().toString().trim().contentEquals("0")) {
@@ -127,7 +130,7 @@ public class MainActivity extends AppCompatActivity {
                         }
                     }
 
-
+                    // Start converting from already converted PDF file
                     if (continueChkbox.isChecked() && compressCheckbox.isChecked()) {
                         if (compressPDF.getText().toString().trim().length() <= 0 ||
                                 compressPDF.getText().toString().trim().contentEquals("0") ||
@@ -142,7 +145,9 @@ public class MainActivity extends AppCompatActivity {
                             compress = Integer.parseInt(compressPDF.getText().toString().trim());
                             startConvertingService(true, true);
                         }
-                    } else if (!continueChkbox.isChecked() && !compressCheckbox.isChecked()) {
+                    }
+                    // Start converting new PDF file
+                    else if (!continueChkbox.isChecked() && !compressCheckbox.isChecked()) {
                         startConvertingService(false, false);
                     }
                 }
@@ -160,23 +165,34 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    // Handling Screen record permission while user Accepted/ Rejected
+    @RequiresApi(api = Build.VERSION_CODES.Q)
     @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == SCREENCAPTURE_PERMISSION_CODE) {
+            if (resultCode == RESULT_OK) {
+                Log.d("Activity", "onStartCommand: resultCode=" + resultCode);
+                Log.d("Activity", "onStartCommand: data=" + data);
+                Log.d("isFrompage", ""+isfromPage);
+                Log.d("isCompress", ""+isCompress);
+                Intent serviceIntent = new Intent(getApplicationContext(), MyAccessibility.class);
+                serviceIntent.putExtra("resultCode",resultCode);
+                Log.e("X Intent Value After Put",""+initializeIntent(data,isfromPage,isCompress).getExtras().getInt("x"));
+                serviceIntent.putExtra("resultCode",resultCode);
+                serviceIntent.putExtra("Intent",data);
+                startService(initializeIntent(serviceIntent,isfromPage,isCompress));
+            }
+        }
         // Permission Denied
         if (requestCode == SCREENCAPTURE_PERMISSION_CODE && resultCode == 0) {
             Toast.makeText(this, "MEDIA PROJECTION permission needed to Capture your Display", Toast.LENGTH_LONG).show();
             finish();
             moveTaskToBack(true);
         }
-        else {
-            MediaProjectionManager projectionManager = (MediaProjectionManager) getSystemService(Context.MEDIA_PROJECTION_SERVICE);
-            projection = projectionManager.getMediaProjection(resultCode, data);
-            WindowManager windowManager = (WindowManager) getApplicationContext().getSystemService(Context.WINDOW_SERVICE);
-            display = windowManager.getDefaultDisplay();
-        }
     }
 
+    // This method will be called after storage permission granted or denied by the user
     @Override
     public void onRequestPermissionsResult(int requestCode,String[] permissions,
                                            int[] grantResults) {
@@ -185,8 +201,8 @@ public class MainActivity extends AppCompatActivity {
             // Request for storage permission
             if (grantResults.length == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 // Permission has been granted.
-                // Permission request was denied.
             } else {
+                // Permission request was denied.
                 Toast.makeText(this,"Storage permission needed to Save PDF files",Toast.LENGTH_LONG).show();
                 finish();
                 moveTaskToBack(true);
@@ -195,27 +211,19 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void requestStoragePermission() {
-        // Permission has not been granted and must be requested.
-        if (ActivityCompat.shouldShowRequestPermissionRationale(this,
-                Manifest.permission.WRITE_EXTERNAL_STORAGE))
+        // Permission has not been granted for previous request and must be requested again.
+        if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.WRITE_EXTERNAL_STORAGE))
         {
-
             ActivityCompat.requestPermissions(MainActivity.this,
-                    new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
-                    STORAGE_PERMISSION_CODE);
-            MediaProjectionManager manager = (MediaProjectionManager) getSystemService(Context.MEDIA_PROJECTION_SERVICE);
-            startActivityForResult(manager.createScreenCaptureIntent(),SCREENCAPTURE_PERMISSION_CODE);
+                    new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, STORAGE_PERMISSION_CODE);
+            Log.e("In Rationale","++++++++++++");
         }
-
+        // If this is the first time requesting permission
         else {
-
             ActivityCompat.requestPermissions(this,
                     new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, STORAGE_PERMISSION_CODE);
-            MediaProjectionManager manager = (MediaProjectionManager) getSystemService(Context.MEDIA_PROJECTION_SERVICE);
-            startActivityForResult(manager.createScreenCaptureIntent(),SCREENCAPTURE_PERMISSION_CODE);
+            Log.e("Out Rationale","++++++++++++");
         }
-
-
     }
 
     //getting values from user
@@ -252,47 +260,52 @@ public class MainActivity extends AppCompatActivity {
      * @param compress compress the pdf file
      */
     public void startConvertingService(boolean fromPage,boolean compress){
-
+        isfromPage = fromPage;
+        isCompress = compress;
+        // Getting screen record permission
+        MediaProjectionManager manager = (MediaProjectionManager) getSystemService(Context.MEDIA_PROJECTION_SERVICE);
+        startActivityForResult(manager.createScreenCaptureIntent(),SCREENCAPTURE_PERMISSION_CODE);
         try{
-            sShotfolder= new File("/sdcard/"+destFolder+"/");
-            mergedFolder= new File("/sdcard/"+destFolder+"/"+"Converted"+"/");
+            File sShotfolder = new File(Environment.getExternalStorageDirectory().getPath()+destFolder);
+            mergedFolder= new File(Environment.getExternalStorageDirectory().getPath()+destFolder+"Converted/");
             if(!sShotfolder.exists()&&!mergedFolder.exists())
             {
                 sShotfolder.mkdir();
                 mergedFolder.mkdir();
             }
         }
-
         catch (Exception e){
+            Log.e("++STORAGE++",e.toString());
             e.printStackTrace();
         }
+    }
 
-        Intent crackService= new Intent(MainActivity.this, MyAccessibility.class);
+    public Intent initializeIntent(Intent intent, boolean fromPage, boolean compress){
         if (fromPage&&!compress){
-            crackService.putExtra("fromPage",this.fromPage);
-            crackService.putExtra("compress",false);
+            intent.putExtra("fromPage",this.fromPage);
+            intent.putExtra("compress",false);
         }
         else if (!fromPage&&compress){
-            crackService.putExtra("fromPage",-1);
-            crackService.putExtra("compress",true);
-            crackService.putExtra("compressRate",this.compress);
+            intent.putExtra("fromPage",-1);
+            intent.putExtra("compress",true);
+            intent.putExtra("compressRate",this.compress);
         }
         else if (fromPage&&compress){
-            crackService.putExtra("fromPage",this.fromPage);
-            crackService.putExtra("compress",true);
-            crackService.putExtra("compressRate",this.compress);
+            intent.putExtra("fromPage",this.fromPage);
+            intent.putExtra("compress",true);
+            intent.putExtra("compressRate",this.compress);
         }
         else {
-            crackService.putExtra("fromPage",-1);
-            crackService.putExtra("compress",false);
+            intent.putExtra("fromPage",-1);
+            intent.putExtra("compress",false);
         }
-
-        crackService.putExtra("file", fileName);
-        crackService.putExtra("x",x);
-        crackService.putExtra("y",y);
-        crackService.putExtra("totalPages", totalPages);
-        crackService.putExtra("time",time);
-        startService(crackService);
+        intent.putExtra("file", fileName);
+        intent.putExtra("x",x);
+        Log.e("X Intent Value",""+x);
+        intent.putExtra("y",y);
+        intent.putExtra("totalPages", totalPages);
+        intent.putExtra("time",time);
+        return intent;
     }
 
     public void showEULA(){
@@ -327,8 +340,6 @@ public class MainActivity extends AppCompatActivity {
         androidx.appcompat.app.AlertDialog dialog = builder.create();
         dialog.show();
     }
-
-
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater inflater = getMenuInflater();

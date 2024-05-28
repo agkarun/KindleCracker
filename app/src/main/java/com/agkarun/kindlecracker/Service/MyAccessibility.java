@@ -42,15 +42,18 @@
  * <https://www.gnu.org/licenses/why-not-lgpl.html>.
  */
 
-
 package com.agkarun.kindlecracker.Service;
 
 import android.accessibilityservice.AccessibilityService;
 import android.accessibilityservice.GestureDescription;
 import android.annotation.TargetApi;
+import android.app.Activity;
 import android.app.Notification;
+import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ServiceInfo;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
@@ -60,16 +63,20 @@ import android.graphics.Point;
 import android.hardware.display.DisplayManager;
 import android.media.ImageReader;
 import android.media.projection.MediaProjection;
+import android.media.projection.MediaProjectionManager;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.Display;
+import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
 import android.widget.Toast;
 
+import androidx.annotation.RequiresApi;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 
@@ -101,6 +108,7 @@ import java.nio.ByteBuffer;
 
 public class MyAccessibility extends AccessibilityService {
     private String fileName;
+    Context context;
     private int i=1,x,y,totalPages,time,fromPage,oldFilePages;
     private static double compression= 30*0.09;
     private static Document document;
@@ -109,13 +117,18 @@ public class MyAccessibility extends AccessibilityService {
     private static boolean compress=false;
     private static int rate;
     private PdfReader reader;
-    MyAccessibility myAccessibility;
-    Display display;
-    MediaProjection projection;
+    private MyAccessibility myAccessibility;
+    private static Display display;
+    private static MediaProjection mediaProjection;
 
+    public MyAccessibility(){
+
+    }
     @Override
     public void onCreate() {
         super.onCreate();
+        myAccessibility = new MyAccessibility();
+        Log.e("++++++On Create+++++++","1");
     }
 
     @Override
@@ -123,21 +136,38 @@ public class MyAccessibility extends AccessibilityService {
         super.onServiceConnected();
     }
 
-    public MyAccessibility(){
-    }
-
-    public MyAccessibility(Display display, MediaProjection projection){
-        this.display=display;
-        this.projection=projection;
-    }
-
+    @RequiresApi(api = Build.VERSION_CODES.Q)
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        Log.e("++++++On Start+++++++","1");
         getValues(intent);
-        touch(x,y);
+        Log.d("onstart intent", "" +  intent.getExtras().getInt("x"));
+        startForeground(1, createNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION);
+        int resultCode = intent.getIntExtra("resultCode",Activity.RESULT_CANCELED);
+        Intent data = intent.getParcelableExtra("Intent");
+        Log.d("ScreenCaptureService", "onStartCommand: resultCode=" + resultCode);
+        Log.d("ScreenCaptureService", "onStartCommand: data=" + data);
+        if(data!=null)Log.e("++++++++++","DATA NOT NULL++++++++++");
+        MediaProjectionManager projectionManager =
+                (MediaProjectionManager) getSystemService(Context.MEDIA_PROJECTION_SERVICE);
+        mediaProjection = projectionManager.getMediaProjection(resultCode,data);
+
+        if (resultCode != Activity.RESULT_CANCELED && data != null) {
+            mediaProjection = projectionManager.getMediaProjection(resultCode, data);
+            if (mediaProjection != null) {
+                Log.d("ScreenCaptureService", "MediaProjection obtained successfully");
+                if(mediaProjection==null)Log.e("++++++++++","MEDIA PROJECTION NULL WHILE CREATION++++++++++");
+                WindowManager windowManager = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
+                display=windowManager.getDefaultDisplay();
+                if(display==null)Log.e("++++++++++","DISPLAY NULL WHILE CREATION++++++++++");
+                if(display!=null)Log.e("++++++++++","DISPLAY NOT NULL WHILE CREATION++++++++++");
+            } else {
+                Log.e("ScreenCaptureService", "MediaProjection is null");
+            }
+        } else {
+            Log.e("ScreenCaptureService", "Invalid resultCode or data");
+        }
         new AsyncCracker().execute();
-        return START_STICKY;
+        return START_NOT_STICKY;
     }
 
     @Override
@@ -165,10 +195,7 @@ public class MyAccessibility extends AccessibilityService {
         }
         super.onDestroy();
     }
-
-
     public void getValues(Intent intent){
-
         try{
             fromPage=intent.getExtras().getInt("fromPage");
             compress=intent.getExtras().getBoolean("compress");
@@ -213,7 +240,7 @@ public class MyAccessibility extends AccessibilityService {
             Log.e("Total Pages",""+totalPages);
         }
         catch (Exception e){
-
+            Log.e("GET VALUES",""+e);
         }
     }
 
@@ -240,7 +267,7 @@ public class MyAccessibility extends AccessibilityService {
                        myAccessibility.takeScreenshot(String.valueOf(i));
 //                       myAccessibility.convertTopdf(String.valueOf(i));
 //                       myAccessibility.mergePdf(String.valueOf(i),fileName);
-                       Log.e("Touch","");
+//                       Log.e("Touch","");
 //                       Toast.makeText(getApplicationContext(),"1",Toast.LENGTH_SHORT).show();
 //                       touch(x,y);
                        i++;
@@ -260,7 +287,7 @@ public class MyAccessibility extends AccessibilityService {
                        myAccessibility.takeScreenshot(String.valueOf(i));
 //                       myAccessibility.convertTopdf(String.valueOf(i));
 //                       myAccessibility.mergePdf(String.valueOf(i),fileName);
-                       Log.e("Touch","");
+//                       Log.e("Touch","");
 //                       Toast.makeText(getApplicationContext(),"2",Toast.LENGTH_SHORT).show();
 //                       touch(x,y);
                        i++;
@@ -284,7 +311,7 @@ public class MyAccessibility extends AccessibilityService {
                            myAccessibility.takeScreenshot(String.valueOf(i));
 //                           myAccessibility.convertTopdf(String.valueOf(i));
 //                           myAccessibility.continuePDFmerge(String.valueOf(i), fileName);
-                           Log.e("Touch","");
+//                           Log.e("Touch","");
 //                           Toast.makeText(getApplicationContext(),"3",Toast.LENGTH_SHORT).show();
 //                           touch(x, y);
                            i++;
@@ -304,7 +331,7 @@ public class MyAccessibility extends AccessibilityService {
                            myAccessibility.takeScreenshot(String.valueOf(i));
 //                           myAccessibility.convertTopdf(String.valueOf(i));
 //                           myAccessibility.continuePDFmerge(String.valueOf(i), fileName);
-                           Log.e("Touch","");
+//                           Log.e("Touch","");
 //                           Toast.makeText(getApplicationContext(),"4",Toast.LENGTH_SHORT).show();
 //                           touch(x, y);
                            i++;
@@ -374,11 +401,11 @@ public class MyAccessibility extends AccessibilityService {
         Log.e("++++","1");
         final DisplayMetrics metrics = new DisplayMetrics();
         Log.e("+++++","2");
-        MainActivity.display.getMetrics(metrics);
+        MyAccessibility.display.getMetrics(metrics);
         Log.e("+++++","3");
         Point size = new Point();
         Log.e("+++++","4");
-        MainActivity.display.getRealSize(size);
+        MyAccessibility.display.getRealSize(size);
         Log.e("+++++","5");
         final int width = size.x;
         Log.e("+++++","6");
@@ -386,13 +413,14 @@ public class MyAccessibility extends AccessibilityService {
         Log.e("+++++","7");
         int density = metrics.densityDpi;
         Log.e("+++++","8");
-        final ImageReader imageReader = ImageReader.newInstance(width,height, PixelFormat.RGBA_8888,2);
+        final ImageReader imageReader = ImageReader.newInstance(width,height, PixelFormat.RGBA_8888,1);
         Log.e("+++++","9");
         final Handler handler = new Handler(Looper.getMainLooper());
         Log.e("+++++","10");
         int flags = DisplayManager.VIRTUAL_DISPLAY_FLAG_OWN_CONTENT_ONLY | DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC;
         Log.e("+++++","11");
-        MainActivity.projection.createVirtualDisplay("screen-mirror",width,height,density,flags,imageReader.getSurface(),null,handler);
+        if (mediaProjection==null)Log.e("+++++","Projection Null");
+        mediaProjection.createVirtualDisplay("screen-mirror",width,height,density,flags,imageReader.getSurface(),null,handler);
         Log.e("+++++","12");
         imageReader.setOnImageAvailableListener(new ImageReader.OnImageAvailableListener() {
             @Override
@@ -421,7 +449,7 @@ public class MyAccessibility extends AccessibilityService {
                 Bitmap realSizeBitmap = Bitmap.createBitmap(bmp, 0, 0, metrics.widthPixels, bmp.getHeight());
                 bmp.recycle();
                 Log.e("+++++", "22");
-                File file = new File(Environment.getExternalStorageDirectory() + "/KindleCracker/" + fileName + ".png");
+                File file = new File(Environment.getExternalStorageDirectory().getPath()+MainActivity.destFolder+fileName+".png");
                 Log.e("+++++", "23");
                 try {
                     FileOutputStream out = new FileOutputStream(file.getAbsolutePath());
@@ -446,9 +474,9 @@ public class MyAccessibility extends AccessibilityService {
         Rectangle rect = doc.getPageSize();
         try {
             PdfWriter writer = PdfWriter.getInstance(doc,new FileOutputStream(Environment
-                    .getExternalStorageDirectory()+"/"+"KindleCracker"+"/"+name+".pdf"));
+                    .getExternalStorageDirectory()+MainActivity.destFolder+name+".pdf"));
             doc.open();
-            File file = new File(Environment.getExternalStorageDirectory()+"/KindleCracker/"+name+".png");
+            File file = new File(Environment.getExternalStorageDirectory()+MainActivity.destFolder+name+".png");
             Image img = Image.getInstance(String.valueOf(file.toURI()));
             img.setCompressionLevel((int)compression);
             img.setBorder(Rectangle.BOX);
@@ -492,12 +520,12 @@ public class MyAccessibility extends AccessibilityService {
 
     //merge pdf for unknown number of pages
     public void mergePdf(String name,String fileName) throws IOException, DocumentException {
-        File filepath= new File(Environment.getExternalStorageDirectory()+"/KindleCracker/"+name+".pdf");
+        File filepath= new File(Environment.getExternalStorageDirectory()+MainActivity.destFolder+name+".pdf");
         try{
             if(MyAccessibility.document==null&& MyAccessibility.copy==null){
                 MyAccessibility.document=new Document();
                 MyAccessibility.copy= new PdfCopy(document,new FileOutputStream
-                        (Environment.getExternalStorageDirectory()+"/KindleCracker/"+"Converted"+"/"+fileName+"-ConvertedPDF"+".pdf"));
+                        (Environment.getExternalStorageDirectory()+MainActivity.destFolder+"Converted"+"/"+fileName+"-ConvertedPDF"+".pdf"));
             }
             MyAccessibility.document.open();
             PdfReader reader = new PdfReader(filepath.toString());
@@ -528,13 +556,13 @@ public class MyAccessibility extends AccessibilityService {
 
     //to continue convert pdf's with already converted folder
     public void continuePDFmerge(String name,String fileName){
-        File filepath= new File(Environment.getExternalStorageDirectory()+"/KindleCracker/"+name+".pdf");
-        File oldFile=new File(Environment.getExternalStorageDirectory()+"/KindleCracker/Converted/"+fileName+"-ConvertedPDF"+".pdf");
+        File filepath= new File(Environment.getExternalStorageDirectory()+MainActivity.destFolder+name+".pdf");
+        File oldFile=new File(Environment.getExternalStorageDirectory()+MainActivity.destFolder+"Converted/"+fileName+"-ConvertedPDF"+".pdf");
         try {
             if (MyAccessibility.document == null && MyAccessibility.copy == null) {
                 MyAccessibility.document = new Document();
                 MyAccessibility.copy = new PdfCopy(MyAccessibility.document, new FileOutputStream
-                        (Environment.getExternalStorageDirectory() + "/KindleCracker/" + "Converted" + "/" +"Continued(Please_Rename_to _original_file_name)"+ ".pdf"));
+                        (Environment.getExternalStorageDirectory() + MainActivity.destFolder + "Converted/"+"Continued(Please_Rename_to _original_file_name)"+ ".pdf"));
                 MyAccessibility.document.open();
                 reader= new PdfReader(oldFile.toString());
                 oldFilePages=reader.getNumberOfPages();
@@ -569,7 +597,7 @@ public class MyAccessibility extends AccessibilityService {
     public void compressPdf(String name,int rate){
 
         try{
-            File file = new File(Environment.getExternalStorageDirectory()+"/"+"KindleCracker"+"/"+name+".pdf");
+            File file = new File(Environment.getExternalStorageDirectory()+MainActivity.destFolder+name+".pdf");
             PdfReader reader = new PdfReader(file.toString());
             int n = reader.getXrefSize();
             PdfObject object;
@@ -613,7 +641,7 @@ public class MyAccessibility extends AccessibilityService {
             file.delete();
             // Save altered PDF
             PdfStamper stamper = new PdfStamper(reader,
-                    new FileOutputStream(Environment.getExternalStorageDirectory()+"/"+"KindleCracker"+"/"+name+".pdf"));
+                    new FileOutputStream(Environment.getExternalStorageDirectory()+MainActivity.destFolder+name+".pdf"));
             stamper.setFullCompression();
             stamper.close();
             reader.close();
@@ -637,4 +665,19 @@ public class MyAccessibility extends AccessibilityService {
 
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    private Notification createNotification() {
+        NotificationChannel channel = null;
+            channel = new NotificationChannel("screencapture", "Screen Capture", NotificationManager.IMPORTANCE_LOW);
+            getApplicationContext().getSystemService(NotificationManager.class).createNotificationChannel(channel);
+
+        return new Notification.Builder(this, "screencapture")
+                .setContentTitle("Screen Capture")
+                .setContentText("Screen capture is running")
+                .setSmallIcon(R.drawable.ic_launcher_foreground)
+                .build();
+            }
+
     }
+
+
