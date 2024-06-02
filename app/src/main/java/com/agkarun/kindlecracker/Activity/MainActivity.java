@@ -53,7 +53,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        // Initializing variables while starting
+//        Initializing variables while starting
         xCoord = findViewById(R.id.Xcoord);
         yCoord = findViewById(R.id.Ycoord);
         file = findViewById(R.id.filename);
@@ -68,16 +68,16 @@ public class MainActivity extends AppCompatActivity {
         continueLay = findViewById(R.id.continuetextLay);
         compressLay = findViewById(R.id.compresspdfLay);
         snackView = findViewById(R.id.rootView);
-        // Checking if EULA is already accepted or not
+//        Checking if EULA is already accepted or not
         preferences = getSharedPreferences("EULA", MODE_PRIVATE);
 
         if (preferences.getBoolean("NOTAGREED", true)) {
             showEULA();
         }
-        // Requesting Storage and Screen Record Permission
+//        Requesting Storage and Screen Record Permission
         requestStoragePermission();
 
-        // Checkbox used to make visibile text field for getting from page number
+//        Checkbox used to make visible text field for getting from page number
         continueChkbox.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -89,7 +89,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // Checkbox used to make visibile text field for getting from page number
+//        Checkbox used to make visible text field for getting from page number
         compressCheckbox.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -101,13 +101,13 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        //starting the pdf converting service
+//        Starting the pdf converting service
         startButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
 
                 if (getValues()) {
-                    // Start converting from already converted PDF file
+//                    Start converting from already converted PDF file
                     if (continueChkbox.isChecked() && !compressCheckbox.isChecked()) {
                         if (pageContinue.getText().toString().trim().length() <= 0 ||
                                 pageContinue.getText().toString().trim().contentEquals("0")) {
@@ -118,7 +118,7 @@ public class MainActivity extends AppCompatActivity {
                             startConvertingService(true, false);
                         }
                     }
-                    // Start converting new PDF
+//                    Start converting new PDF
                     if (!continueChkbox.isChecked() && compressCheckbox.isChecked()) {
                         if (compressPDF.getText().toString().trim().length() <= 0 ||
                                 compressPDF.getText().toString().trim().contentEquals("0")) {
@@ -130,7 +130,7 @@ public class MainActivity extends AppCompatActivity {
                         }
                     }
 
-                    // Start converting from already converted PDF file
+//                    Start converting from already converted PDF file
                     if (continueChkbox.isChecked() && compressCheckbox.isChecked()) {
                         if (compressPDF.getText().toString().trim().length() <= 0 ||
                                 compressPDF.getText().toString().trim().contentEquals("0") ||
@@ -146,7 +146,7 @@ public class MainActivity extends AppCompatActivity {
                             startConvertingService(true, true);
                         }
                     }
-                    // Start converting new PDF file
+//                    Start converting new PDF file
                     else if (!continueChkbox.isChecked() && !compressCheckbox.isChecked()) {
                         startConvertingService(false, false);
                     }
@@ -154,55 +154,50 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        //stop pdf converting
+//        Stop pdf converting
         stopBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                stopService(new Intent(MainActivity.this, MyAccessibility.class));
+                Intent stopServiceintent = new Intent(MainActivity.this, MyAccessibility.class);
+                stopServiceintent.setAction("STOP_SERVICE");
+                startService(stopServiceintent);
                 Snackbar.make(snackView, "Converting Stopped...", Snackbar.LENGTH_LONG).show();
             }
         });
 
     }
 
-    // Handling Screen record permission while user Accepted/ Rejected
+//    Handling Screen record permission while user Accepted/ Rejected
     @RequiresApi(api = Build.VERSION_CODES.Q)
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == SCREENCAPTURE_PERMISSION_CODE) {
             if (resultCode == RESULT_OK) {
-                Log.d("Activity", "onStartCommand: resultCode=" + resultCode);
-                Log.d("Activity", "onStartCommand: data=" + data);
-                Log.d("isFrompage", ""+isfromPage);
-                Log.d("isCompress", ""+isCompress);
                 Intent serviceIntent = new Intent(getApplicationContext(), MyAccessibility.class);
                 serviceIntent.putExtra("resultCode",resultCode);
-                Log.e("X Intent Value After Put",""+initializeIntent(data,isfromPage,isCompress).getExtras().getInt("x"));
                 serviceIntent.putExtra("resultCode",resultCode);
                 serviceIntent.putExtra("Intent",data);
                 startService(initializeIntent(serviceIntent,isfromPage,isCompress));
             }
         }
-        // Permission Denied
+//        Permission Denied
         if (requestCode == SCREENCAPTURE_PERMISSION_CODE && resultCode == 0) {
             Toast.makeText(this, "MEDIA PROJECTION permission needed to Capture your Display", Toast.LENGTH_LONG).show();
-            finish();
-            moveTaskToBack(true);
         }
     }
 
-    // This method will be called after storage permission granted or denied by the user
+//    This method will be called after storage permission granted or denied by the user
     @Override
     public void onRequestPermissionsResult(int requestCode,String[] permissions,
                                            int[] grantResults) {
 
         if (requestCode == STORAGE_PERMISSION_CODE) {
-            // Request for storage permission
+//            Request for storage permission
             if (grantResults.length == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // Permission has been granted.
+//                Permission has been granted.
             } else {
-                // Permission request was denied.
+//                Permission request was denied.
                 Toast.makeText(this,"Storage permission needed to Save PDF files",Toast.LENGTH_LONG).show();
                 finish();
                 moveTaskToBack(true);
@@ -211,22 +206,20 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void requestStoragePermission() {
-        // Permission has not been granted for previous request and must be requested again.
+//        Permission has not been granted for previous request and must be requested again.
         if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.WRITE_EXTERNAL_STORAGE))
         {
             ActivityCompat.requestPermissions(MainActivity.this,
                     new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, STORAGE_PERMISSION_CODE);
-            Log.e("In Rationale","++++++++++++");
         }
-        // If this is the first time requesting permission
+//        If this is the first time requesting permission
         else {
             ActivityCompat.requestPermissions(this,
                     new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, STORAGE_PERMISSION_CODE);
-            Log.e("Out Rationale","++++++++++++");
         }
     }
 
-    //getting values from user
+//    getting values from user
     public boolean getValues() {
         boolean values=false;
         if (xCoord.getText().toString().trim().length() > 0 &&
@@ -262,7 +255,7 @@ public class MainActivity extends AppCompatActivity {
     public void startConvertingService(boolean fromPage,boolean compress){
         isfromPage = fromPage;
         isCompress = compress;
-        // Getting screen record permission
+//        Getting screen record permission
         MediaProjectionManager manager = (MediaProjectionManager) getSystemService(Context.MEDIA_PROJECTION_SERVICE);
         startActivityForResult(manager.createScreenCaptureIntent(),SCREENCAPTURE_PERMISSION_CODE);
         try{
@@ -279,7 +272,6 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
     }
-
     public Intent initializeIntent(Intent intent, boolean fromPage, boolean compress){
         if (fromPage&&!compress){
             intent.putExtra("fromPage",this.fromPage);
@@ -301,20 +293,16 @@ public class MainActivity extends AppCompatActivity {
         }
         intent.putExtra("file", fileName);
         intent.putExtra("x",x);
-        Log.e("X Intent Value",""+x);
         intent.putExtra("y",y);
         intent.putExtra("totalPages", totalPages);
         intent.putExtra("time",time);
         return intent;
     }
-
     public void showEULA(){
-
         final androidx.appcompat.app.AlertDialog.Builder builder = new androidx.appcompat.app.AlertDialog.Builder(MainActivity.this);
         builder.setMessage("Click AGREE button to Agree the licence agreement.")
                 .setTitle("End User Licence Agreement")
                 .setCancelable(false)
-
                 .setNeutralButton("View Licence", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
@@ -322,7 +310,6 @@ public class MainActivity extends AppCompatActivity {
                         startActivity(browserIntent);
                     }
                 })
-
                 .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
@@ -330,7 +317,6 @@ public class MainActivity extends AppCompatActivity {
                         moveTaskToBack(true);
                     }
                 })
-
                 .setPositiveButton("AGREE", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
@@ -359,9 +345,7 @@ public class MainActivity extends AppCompatActivity {
             default:
                 return super.onOptionsItemSelected(item);
         }
-
     }
-
     @Override
     protected void onDestroy() {
         super.onDestroy();

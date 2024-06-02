@@ -108,7 +108,6 @@ import java.nio.ByteBuffer;
 
 public class MyAccessibility extends AccessibilityService {
     private String fileName;
-    Context context;
     private int i=1,x,y,totalPages,time,fromPage,oldFilePages;
     private static double compression= 30*0.09;
     private static Document document;
@@ -120,6 +119,7 @@ public class MyAccessibility extends AccessibilityService {
     private MyAccessibility myAccessibility;
     private static Display display;
     private static MediaProjection mediaProjection;
+    private static ImageReader imageReader;
 
     public MyAccessibility(){
 
@@ -128,9 +128,7 @@ public class MyAccessibility extends AccessibilityService {
     public void onCreate() {
         super.onCreate();
         myAccessibility = new MyAccessibility();
-        Log.e("++++++On Create+++++++","1");
     }
-
     @Override
     protected void onServiceConnected() {
         super.onServiceConnected();
@@ -139,35 +137,39 @@ public class MyAccessibility extends AccessibilityService {
     @RequiresApi(api = Build.VERSION_CODES.Q)
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        getValues(intent);
-        Log.d("onstart intent", "" +  intent.getExtras().getInt("x"));
-        startForeground(1, createNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION);
-        int resultCode = intent.getIntExtra("resultCode",Activity.RESULT_CANCELED);
-        Intent data = intent.getParcelableExtra("Intent");
-        Log.d("ScreenCaptureService", "onStartCommand: resultCode=" + resultCode);
-        Log.d("ScreenCaptureService", "onStartCommand: data=" + data);
-        if(data!=null)Log.e("++++++++++","DATA NOT NULL++++++++++");
-        MediaProjectionManager projectionManager =
-                (MediaProjectionManager) getSystemService(Context.MEDIA_PROJECTION_SERVICE);
-        mediaProjection = projectionManager.getMediaProjection(resultCode,data);
-
-        if (resultCode != Activity.RESULT_CANCELED && data != null) {
-            mediaProjection = projectionManager.getMediaProjection(resultCode, data);
-            if (mediaProjection != null) {
-                Log.d("ScreenCaptureService", "MediaProjection obtained successfully");
-                if(mediaProjection==null)Log.e("++++++++++","MEDIA PROJECTION NULL WHILE CREATION++++++++++");
-                WindowManager windowManager = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
-                display=windowManager.getDefaultDisplay();
-                if(display==null)Log.e("++++++++++","DISPLAY NULL WHILE CREATION++++++++++");
-                if(display!=null)Log.e("++++++++++","DISPLAY NOT NULL WHILE CREATION++++++++++");
-            } else {
-                Log.e("ScreenCaptureService", "MediaProjection is null");
-            }
-        } else {
-            Log.e("ScreenCaptureService", "Invalid resultCode or data");
+        String action = intent.getAction();
+        if(action=="STOP_SERVICE"){
+            stopForegroundservice();
+            stopSelf();
+            new AsyncCracker().cancel(true);
+            return START_NOT_STICKY;
         }
-        new AsyncCracker().execute();
-        return START_NOT_STICKY;
+        else{
+            getValues(intent);
+            startForeground(1, createNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION);
+            int resultCode = intent.getIntExtra("resultCode",Activity.RESULT_CANCELED);
+            Intent data = intent.getParcelableExtra("Intent");
+            MediaProjectionManager projectionManager =
+                    (MediaProjectionManager) getSystemService(Context.MEDIA_PROJECTION_SERVICE);
+            mediaProjection = projectionManager.getMediaProjection(resultCode,data);
+            if (resultCode != Activity.RESULT_CANCELED && data != null) {
+                mediaProjection = projectionManager.getMediaProjection(resultCode, data);
+                if (mediaProjection != null) {
+                    Log.d("ScreenCaptureService", "MediaProjection obtained successfully");
+                    if(mediaProjection==null)Log.e("++++++++++","MEDIA PROJECTION NULL WHILE CREATION++++++++++");
+                    WindowManager windowManager = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
+                    display=windowManager.getDefaultDisplay();
+                    if(display==null)Log.e("++++++++++","DISPLAY NULL WHILE CREATION++++++++++");
+                    if(display!=null)Log.e("++++++++++","DISPLAY NOT NULL WHILE CREATION++++++++++");
+                } else {
+                    Log.e("ScreenCaptureService", "MediaProjection is null");
+                }
+            } else {
+                Log.e("ScreenCaptureService", "Invalid resultCode or data");
+            }
+            new AsyncCracker().execute();
+            return START_NOT_STICKY;
+        }
     }
 
     @Override
@@ -188,19 +190,20 @@ public class MyAccessibility extends AccessibilityService {
 
     @Override
     public void onDestroy() {
+        super.onDestroy();
         if (MyAccessibility.document!=null){
             MyAccessibility.document.close();
             MyAccessibility.document=null;
             MyAccessibility.copy=null;
         }
-        super.onDestroy();
+        stopForeground(true);
+        stopSelf();
     }
     public void getValues(Intent intent){
         try{
             fromPage=intent.getExtras().getInt("fromPage");
             compress=intent.getExtras().getBoolean("compress");
             rate=intent.getExtras().getInt("compressRate");
-            Log.e("From Page",""+fromPage);
             if(compress)
             {
                 if(rate>100)
@@ -235,9 +238,6 @@ public class MyAccessibility extends AccessibilityService {
             y=intent.getExtras().getInt("y");
             time=intent.getExtras().getInt("time");
             totalPages=intent.getExtras().getInt("totalPages");
-            Log.e("X",""+x);
-            Log.e("Y",""+y);
-            Log.e("Total Pages",""+totalPages);
         }
         catch (Exception e){
             Log.e("GET VALUES",""+e);
@@ -254,22 +254,24 @@ public class MyAccessibility extends AccessibilityService {
        @Override
        protected String doInBackground(String... strings) {
            try {
-               Log.e("Thread","");
                Thread.sleep(time*1000);
            } catch (InterruptedException e) {
                e.printStackTrace();
            }
 
-           //if totalpages=0 the loop will run infinitly
+//           if totalpages=0 the loop will run infinitly
            if(totalPages==0&&!continueFromPage){
                try{
                    while (true){
                        myAccessibility.takeScreenshot(String.valueOf(i));
-//                       myAccessibility.convertTopdf(String.valueOf(i));
-//                       myAccessibility.mergePdf(String.valueOf(i),fileName);
-//                       Log.e("Touch","");
-//                       Toast.makeText(getApplicationContext(),"1",Toast.LENGTH_SHORT).show();
-//                       touch(x,y);
+                       if(i==1) Thread.sleep(3000);
+                       else {
+                           Thread.sleep(1000);
+                       }
+                       myAccessibility.convertTopdf(String.valueOf(i));
+                       myAccessibility.mergePdf(String.valueOf(i),fileName);
+                       touch(x,y);
+                       Thread.sleep(1000);
                        i++;
                    }
                }
@@ -277,63 +279,69 @@ public class MyAccessibility extends AccessibilityService {
                    if(document!=null) document.close();
                    e.printStackTrace();
                }
-
            }
 
-          //if number of pages is defined this loop will run
+//          if number of pages is defined this loop will run
            else if(totalPages>=i&&!continueFromPage) {
                try{
                    while (totalPages>=i){
                        myAccessibility.takeScreenshot(String.valueOf(i));
-//                       myAccessibility.convertTopdf(String.valueOf(i));
-//                       myAccessibility.mergePdf(String.valueOf(i),fileName);
-//                       Log.e("Touch","");
-//                       Toast.makeText(getApplicationContext(),"2",Toast.LENGTH_SHORT).show();
-//                       touch(x,y);
+                       if(i==1) Thread.sleep(3000);
+                       else {
+                           Thread.sleep(1000);
+                       }
+                       myAccessibility.convertTopdf(String.valueOf(i));
+                       myAccessibility.mergePdf(String.valueOf(i),fileName);
+                       touch(x,y);
+                       Thread.sleep(1000);
                        i++;
                    }
                }
                catch (Exception e) {
                    if(document!=null) document.close();
                    e.printStackTrace();
-//                   Toast.makeText(getApplicationContext(),""+e,Toast.LENGTH_SHORT).show();
                }
            }
 
 
-           //if user wants to continue from old pdf file this code will be executed
+//           if user wants to continue from old pdf file this code will be executed
            else if(continueFromPage) {
 
-               //if totalpages=0 the loop will run infinitly
+//               if totalpages=0 the loop will run infinitly
                if (totalPages == 0 && continueFromPage) {
                    try {
                        while (true) {
                            myAccessibility.takeScreenshot(String.valueOf(i));
-//                           myAccessibility.convertTopdf(String.valueOf(i));
-//                           myAccessibility.continuePDFmerge(String.valueOf(i), fileName);
-//                           Log.e("Touch","");
-//                           Toast.makeText(getApplicationContext(),"3",Toast.LENGTH_SHORT).show();
-//                           touch(x, y);
+                           if(i==1) Thread.sleep(3000);
+                           else {
+                               Thread.sleep(1000);
+                           }
+                           myAccessibility.convertTopdf(String.valueOf(i));
+                           myAccessibility.mergePdf(String.valueOf(i),fileName);
+                           touch(x,y);
+                           Thread.sleep(1000);
                            i++;
                        }
                    } catch (Exception e) {
                        document.close();
                        e.printStackTrace();
-//                       Toast.makeText(getApplicationContext(),""+e,Toast.LENGTH_SHORT).show();
                    }
 
                }
 
-               //if number of pages is defined this loop will run
+//               if number of pages is defined this loop will run
                else if (totalPages >= i && continueFromPage) {
                    try {
                        while (totalPages >= i) {
                            myAccessibility.takeScreenshot(String.valueOf(i));
-//                           myAccessibility.convertTopdf(String.valueOf(i));
-//                           myAccessibility.continuePDFmerge(String.valueOf(i), fileName);
-//                           Log.e("Touch","");
-//                           Toast.makeText(getApplicationContext(),"4",Toast.LENGTH_SHORT).show();
-//                           touch(x, y);
+                           if(i==1) Thread.sleep(3000);
+                           else {
+                               Thread.sleep(1000);
+                           }
+                           myAccessibility.convertTopdf(String.valueOf(i));
+                           myAccessibility.mergePdf(String.valueOf(i),fileName);
+                           touch(x,y);
+                           Thread.sleep(1000);
                            i++;
                        }
 
@@ -341,14 +349,12 @@ public class MyAccessibility extends AccessibilityService {
                    catch (Exception e) {
                        if(MyAccessibility.document!=null)  MyAccessibility.document.close();
                        e.printStackTrace();
-//                       Toast.makeText(getApplicationContext(),""+e,Toast.LENGTH_SHORT).show();
                    }
                }
            }
 
            return null;
        }
-
 
        @Override
        protected void onPostExecute(String s)
@@ -359,10 +365,11 @@ public class MyAccessibility extends AccessibilityService {
            if(MyAccessibility.document!=null) MyAccessibility.document.close();
            MyAccessibility.document=null;
            MyAccessibility.copy=null;
+           mediaProjection.stop();
+           stopForeground(true);
            stopSelf();
        }
    }
-
     /**
      * the touch method used for automate the touch in device screen with given coordinate points on the screen
      * @param x for x coordinate
@@ -372,7 +379,7 @@ public class MyAccessibility extends AccessibilityService {
 @TargetApi(24)
     public void touch(int x, int y)
     {
-        Log.e("Completed 1","");
+        Log.e("Touch 1","");
         GestureDescription.Builder builder = new GestureDescription.Builder();
         Path p = new Path();
         Point position = new Point(x,y);
@@ -382,88 +389,61 @@ public class MyAccessibility extends AccessibilityService {
         boolean isDispatched = dispatchGesture(gesture, new GestureResultCallback() {
             @Override
             public void onCompleted(GestureDescription gestureDescription) {
-                Log.e("Completed 2","");
                 super.onCompleted(gestureDescription);
+                Log.e("Touch 2","");
             }
-
             @Override
             public void onCancelled(GestureDescription gestureDescription) {
-                Log.e("Not Completed","");
                 super.onCancelled(gestureDescription);
+                Log.e("Touch Cancelled",gestureDescription.toString());
             }
         },null);
-//        Toast.makeText(CrackService.this,""+isDispatched,Toast.LENGTH_SHORT).show();
-//        return isDispatched;
+        Log.e("++isDispatched++",""+isDispatched);
 
     }
 
-    public void takeScreenshot(final String fileName) {
-        Log.e("++++","1");
+    public void takeScreenshot(String fileName) {
         final DisplayMetrics metrics = new DisplayMetrics();
-        Log.e("+++++","2");
         MyAccessibility.display.getMetrics(metrics);
-        Log.e("+++++","3");
         Point size = new Point();
-        Log.e("+++++","4");
         MyAccessibility.display.getRealSize(size);
-        Log.e("+++++","5");
         final int width = size.x;
-        Log.e("+++++","6");
         final int height = size.y;
-        Log.e("+++++","7");
         int density = metrics.densityDpi;
-        Log.e("+++++","8");
-        final ImageReader imageReader = ImageReader.newInstance(width,height, PixelFormat.RGBA_8888,1);
-        Log.e("+++++","9");
+        imageReader = ImageReader.newInstance(width,height, PixelFormat.RGBA_8888,1);
         final Handler handler = new Handler(Looper.getMainLooper());
-        Log.e("+++++","10");
         int flags = DisplayManager.VIRTUAL_DISPLAY_FLAG_OWN_CONTENT_ONLY | DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC;
-        Log.e("+++++","11");
-        if (mediaProjection==null)Log.e("+++++","Projection Null");
         mediaProjection.createVirtualDisplay("screen-mirror",width,height,density,flags,imageReader.getSurface(),null,handler);
-        Log.e("+++++","12");
         imageReader.setOnImageAvailableListener(new ImageReader.OnImageAvailableListener() {
             @Override
             public void onImageAvailable(ImageReader reader) {
-                Log.e("+++++", "13");
                 reader.setOnImageAvailableListener(null,handler);
                 android.media.Image image = reader.acquireLatestImage();
-                Log.e("+++++", "14");
                 final android.media.Image.Plane[] planes = image.getPlanes();
-                Log.e("+++++", "15");
                 final ByteBuffer buffer = planes[0].getBuffer();
-                Log.e("+++++", "16");
                 int pixelStride = planes[0].getPixelStride();
-                Log.e("+++++", "17");
                 int rowStride = planes[0].getRowStride();
-                Log.e("+++++", "18");
                 int rowPadding = rowStride - pixelStride * metrics.widthPixels;
-                Log.e("+++++", "19");
                 Bitmap bmp = Bitmap.createBitmap(metrics.widthPixels + (int) ((float) rowPadding / (float) pixelStride),
                         metrics.heightPixels, Bitmap.Config.ARGB_8888);
-                Log.e("+++++", "20");
                 bmp.copyPixelsFromBuffer(buffer);
                 image.close();
                 reader.close();
-                Log.e("+++++", "21");
                 Bitmap realSizeBitmap = Bitmap.createBitmap(bmp, 0, 0, metrics.widthPixels, bmp.getHeight());
                 bmp.recycle();
-                Log.e("+++++", "22");
-                File file = new File(Environment.getExternalStorageDirectory().getPath()+MainActivity.destFolder+fileName+".png");
-                Log.e("+++++", "23");
                 try {
+                    File file = new File(Environment.getExternalStorageDirectory().getPath()+MainActivity.destFolder+fileName+".png");
                     FileOutputStream out = new FileOutputStream(file.getAbsolutePath());
                     realSizeBitmap.compress(Bitmap.CompressFormat.PNG, 100, out);
                     out.close();
-                } catch (IOException e) {
+                }
+                catch (Exception e) {
+                    Log.e("+++++PNG PATH+++++", ""+e);
                     e.printStackTrace();
                 }
             }
         },handler);
     }
-
-
-
     /**
      * this method used for convert image file to pdf
      * @param name
@@ -496,15 +476,14 @@ public class MyAccessibility extends AccessibilityService {
             }
             file.delete();
 
-
         } catch (Exception e) {
-
+            Log.e("+++Convert to PDF Error 1+++:",""+e);
             if (document !=null)
             {
                 document.close();
             }
             else {
-                Log.e("This Error:",""+e);
+                Log.e("+++Convert to PDF Error 2++++:",""+e);
             }
         }
     }
@@ -517,8 +496,7 @@ public class MyAccessibility extends AccessibilityService {
      * @throws DocumentException
      */
 
-
-    //merge pdf for unknown number of pages
+//    merge pdf for unknown number of pages
     public void mergePdf(String name,String fileName) throws IOException, DocumentException {
         File filepath= new File(Environment.getExternalStorageDirectory()+MainActivity.destFolder+name+".pdf");
         try{
@@ -539,7 +517,7 @@ public class MyAccessibility extends AccessibilityService {
     }
 
 
-    //adding page number to pdf and app name
+//    adding page number to pdf and app name
     public void addPagenumber(Rectangle rect,PdfWriter writer,String pageNumber){
         Phrase phrase;
         if (pageNumber.contentEquals("1")||pageNumber.contentEquals("50")||pageNumber.contentEquals("100"))
@@ -554,7 +532,7 @@ public class MyAccessibility extends AccessibilityService {
                 rect.getBottom()+25,0);
     }
 
-    //to continue convert pdf's with already converted folder
+//    to continue convert pdf's with already converted folder
     public void continuePDFmerge(String name,String fileName){
         File filepath= new File(Environment.getExternalStorageDirectory()+MainActivity.destFolder+name+".pdf");
         File oldFile=new File(Environment.getExternalStorageDirectory()+MainActivity.destFolder+"Converted/"+fileName+"-ConvertedPDF"+".pdf");
@@ -582,7 +560,6 @@ public class MyAccessibility extends AccessibilityService {
                 filepath.delete();
             }
         }
-
         catch (Exception e){
             MyAccessibility.document.close();
         }
@@ -623,7 +600,6 @@ public class MyAccessibility extends AccessibilityService {
                     Canvas outCanvas = new Canvas(outBitmap);
                     outCanvas.drawBitmap(bmp, 0f, 0f, null);
                     ByteArrayOutputStream imgBytes = new ByteArrayOutputStream();
-                    Log.e("CompRate",""+rate);
                     outBitmap.compress(Bitmap.CompressFormat.JPEG,rate, imgBytes);
                     stream.clear();
                     stream.setData(imgBytes.toByteArray(), false, PRStream.BEST_COMPRESSION);
@@ -636,7 +612,6 @@ public class MyAccessibility extends AccessibilityService {
                     stream.put(PdfName.COLORSPACE, PdfName.DEVICERGB);
                 }
             }
-
             reader.removeUnusedObjects();
             file.delete();
             // Save altered PDF
@@ -648,11 +623,12 @@ public class MyAccessibility extends AccessibilityService {
         }
         catch (Exception e){
         }
-
     }
-
+public void stopForegroundservice(){
+        stopForeground(true);
+        stopSelf();
+}
     public void showNotification(String message) {
-
         androidx.core.app.NotificationCompat.Builder notify = new NotificationCompat.Builder(getApplicationContext())
                 .setSmallIcon(R.mipmap.ic_launcher)
                 .setContentTitle("Kindle Cracker")
@@ -664,20 +640,15 @@ public class MyAccessibility extends AccessibilityService {
         notificationmanager.notify(10101,notify.build());
 
     }
-
     @RequiresApi(api = Build.VERSION_CODES.O)
     private Notification createNotification() {
         NotificationChannel channel = null;
             channel = new NotificationChannel("screencapture", "Screen Capture", NotificationManager.IMPORTANCE_LOW);
             getApplicationContext().getSystemService(NotificationManager.class).createNotificationChannel(channel);
-
         return new Notification.Builder(this, "screencapture")
                 .setContentTitle("Screen Capture")
                 .setContentText("Screen capture is running")
                 .setSmallIcon(R.drawable.ic_launcher_foreground)
                 .build();
             }
-
     }
-
-
