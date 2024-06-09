@@ -25,7 +25,7 @@
         <activity android:name=".Activity.GuidActivity"/>
         <activity android:name=".Activity.AboutActivity"/>
 
-        <service android:name=".Service.MyAccessibility"
+        <service android:name=".Service.CrackAccessibilityService"
             android:exported="true"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
             android:label="Kindle Cracker"
