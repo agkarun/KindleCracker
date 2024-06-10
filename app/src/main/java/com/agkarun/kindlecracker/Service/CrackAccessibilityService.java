@@ -64,7 +64,6 @@ import android.hardware.display.DisplayManager;
 import android.media.ImageReader;
 import android.media.projection.MediaProjection;
 import android.media.projection.MediaProjectionManager;
-import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
@@ -102,7 +101,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -120,7 +118,6 @@ public class CrackAccessibilityService extends AccessibilityService {
     private static Display display;
     private static MediaProjection mediaProjection;
     private static ImageReader imageReader;
-    private Handler handler;
     private static ExecutorService executor;
 
     public CrackAccessibilityService() {
@@ -190,7 +187,8 @@ public class CrackAccessibilityService extends AccessibilityService {
         return super.stopService(name);
     }
 
-
+// onDestroy() Will be called after the user stops the service by pressing Stop Converting button
+// this method will stop the executor thread, media projection, foreground service and closes the documents
     @Override
     public void onDestroy() {
         Log.e("++DESTROY++", "DESTROY");
@@ -202,13 +200,13 @@ public class CrackAccessibilityService extends AccessibilityService {
         if (mediaProjection != null) mediaProjection.stop();
         try{
             CrackAccessibilityService.executor.shutdownNow();
+            CrackAccessibilityService.executor=null;
         }
         catch (Exception e){
             Log.e("++CANCEL++", ""+e);
         }
         stopForeground(true);
         stopSelf();
-        Log.e("++DESTROY 1++", "DESTROY 1");
         super.onDestroy();
     }
 
@@ -240,6 +238,7 @@ public class CrackAccessibilityService extends AccessibilityService {
                 compress = true;
                 i = fromPage;
             }
+            Log.e("CONTINUE PAGE", "" + continueFromPage);
             crackAccessibilityService = new CrackAccessibilityService();
             userDefinedfileName = intent.getStringExtra("file");
             x = intent.getExtras().getInt("x");
@@ -254,31 +253,41 @@ public class CrackAccessibilityService extends AccessibilityService {
     // startConvert is used for doing the converting related operation in background
     private void startConvert() {
         Looper.prepare();
-        Toast.makeText(getApplicationContext(), userDefinedfileName + " Will be started to convert within " + time + " Seconds", Toast.LENGTH_SHORT).show();
+        Toast.makeText(getApplicationContext(), userDefinedfileName + " will be started to convert within " + time + " Seconds", Toast.LENGTH_SHORT).show();
         try {
             synchronized (CrackAccessibilityService.executor) {
                 executor.wait(time * 1000);
             }
         } catch (InterruptedException e) {
-//
+
         }
         // if totalpages=0 the loop will run infinitly
         if (totalPages == 0 && !continueFromPage) {
             try {
                 while (true) {
+                    Log.e("++CALLING SCREENSHOT++", "CALLING SCREENSHOT METHOD");
                     crackAccessibilityService.takeScreenshot(String.valueOf(i));
-                    if (i == 1) Thread.sleep(3000);
-                    else {
-                        Thread.sleep(1000);
+                    synchronized (CrackAccessibilityService.executor) {
+                        /* Executor will be locked and wait() called for capturing screenshot and
+                           saving as PNG, because Imagelistener will work concurrently. If we did
+                           not wait here, before saving the PNG the converTopdf() method will be called
+                           eventually the application will crash. So after the PNG image generated notify()
+                           will be called on the executor after that executor resumes and starts to convert
+                           the generated PNG into PDF */
+                        CrackAccessibilityService.executor.wait();
                     }
-                    crackAccessibilityService.convertTopdf(String.valueOf(i));
+                    Log.e("++CALLING CONVERT++", "CALLING CONVERT");
+                    crackAccessibilityService.convertPngToPdf(String.valueOf(i));
+                    Log.e("++CALLING MERGE++", "CALLING MERGE");
                     crackAccessibilityService.mergePdf(String.valueOf(i), userDefinedfileName);
+                    Log.e("++CALLING TOUCH++", "CALLING TOUCH");
                     touch(x, y);
                     Thread.sleep(1000);
                     i++;
                 }
             } catch (Exception e) {
                 if (document != null) document.close();
+                Log.e("++CONVERTING EXCEPTION++", ""+e);
                 e.printStackTrace();
             }
         }
@@ -299,7 +308,7 @@ public class CrackAccessibilityService extends AccessibilityService {
                         CrackAccessibilityService.executor.wait();
                     }
                     Log.e("++CALLING CONVERT++", "CALLING CONVERT");
-                    crackAccessibilityService.convertTopdf(String.valueOf(i));
+                    crackAccessibilityService.convertPngToPdf(String.valueOf(i));
                     Log.e("++CALLING MERGE++", "CALLING MERGE");
                     crackAccessibilityService.mergePdf(String.valueOf(i), userDefinedfileName);
                     Log.e("++CALLING TOUCH++", "CALLING TOUCH");
@@ -318,53 +327,86 @@ public class CrackAccessibilityService extends AccessibilityService {
         else if (continueFromPage) {
 
             // if totalpages=0 the loop will run infinitly
-            if (totalPages == 0 && continueFromPage) {
+            if (totalPages == 0) {
                 try {
                     while (true) {
+                        Log.e("++CALLING SCREENSHOT++", "CALLING SCREENSHOT METHOD");
                         crackAccessibilityService.takeScreenshot(String.valueOf(i));
-                        if (i == 1) Thread.sleep(3000);
-                        else {
-                            Thread.sleep(1000);
+                        synchronized (CrackAccessibilityService.executor) {
+                        /* Executor will be locked and wait() called for capturing screenshot and
+                           saving as PNG, because Imagelistener will work concurrently. If we did
+                           not wait here, before saving the PNG the converTopdf() method will be called
+                           eventually the application will crash. So after the PNG image generated notify()
+                           will be called on the executor after that executor resumes and starts to convert
+                           the generated PNG into PDF */
+                            CrackAccessibilityService.executor.wait();
                         }
-                        crackAccessibilityService.convertTopdf(String.valueOf(i));
-                        crackAccessibilityService.mergePdf(String.valueOf(i), userDefinedfileName);
+                        Log.e("++CALLING CONVERT++", "CALLING CONVERT");
+                        crackAccessibilityService.convertPngToPdf(String.valueOf(i));
+                        Log.e("++CALLING MERGE++", "CALLING MERGE");
+                        crackAccessibilityService.continuePDFmerge(String.valueOf(i), userDefinedfileName);
+                        Log.e("++CALLING TOUCH++", "CALLING TOUCH");
                         touch(x, y);
                         Thread.sleep(1000);
                         i++;
                     }
                 } catch (Exception e) {
-                    document.close();
+                    if (document != null) document.close();
+                    Log.e("++CONVERTING EXCEPTION++", ""+e);
                     e.printStackTrace();
                 }
 
             }
 
             // if number of pages is defined this loop will run
-            else if (totalPages >= i && continueFromPage) {
+            else if (totalPages >= i) {
                 try {
                     while (totalPages >= i) {
+                        Log.e("++CALLING SCREENSHOT++", "CALLING SCREENSHOT METHOD");
                         crackAccessibilityService.takeScreenshot(String.valueOf(i));
-                        if (i == 1) Thread.sleep(3000);
-                        else {
-                            Thread.sleep(1000);
+                        synchronized (CrackAccessibilityService.executor) {
+                        /* Executor will be locked and wait() called for capturing screenshot and
+                           saving as PNG, because Imagelistener will work concurrently. If we did
+                           not wait here, before saving the PNG the converTopdf() method will be called
+                           eventually the application will crash. So after the PNG image generated notify()
+                           will be called on the executor after that executor resumes and starts to convert
+                           the generated PNG into PDF */
+                            CrackAccessibilityService.executor.wait();
                         }
-                        crackAccessibilityService.convertTopdf(String.valueOf(i));
-                        crackAccessibilityService.mergePdf(String.valueOf(i), userDefinedfileName);
+                        Log.e("++CALLING CONVERT++", "CALLING CONVERT");
+                        crackAccessibilityService.convertPngToPdf(String.valueOf(i));
+                        Log.e("++CALLING MERGE++", "CALLING MERGE");
+                        crackAccessibilityService.continuePDFmerge(String.valueOf(i), userDefinedfileName);
+                        Log.e("++CALLING TOUCH++", "CALLING TOUCH");
                         touch(x, y);
                         Thread.sleep(1000);
                         i++;
                     }
 
                 } catch (Exception e) {
-                    if (CrackAccessibilityService.document != null)
-                        CrackAccessibilityService.document.close();
+                    if (document != null) document.close();
+                    Log.e("++CONVERTING EXCEPTION++", ""+e);
                     e.printStackTrace();
                 }
             }
         }
-        //All pages Converted successfully
-        if(i==totalPages){
+        //After the converting loop ends
+        if(i>totalPages){
+            Log.e("++I VALUE++", ""+i);
+            i = 1;
+            Log.e("++I VALUE++", ""+i);
+            if (CrackAccessibilityService.document != null) CrackAccessibilityService.document.close();
+            CrackAccessibilityService.document = null;
+            CrackAccessibilityService.pdfCopy = null;
+            mediaProjection.stop();
+            stopForeground(true);
+            stopSelf();
+            CrackAccessibilityService.executor.shutdownNow();
+            CrackAccessibilityService.executor=null;
+            showNotification(userDefinedfileName + " Successfully Converted to PDF");
             Toast.makeText(getApplicationContext(), userDefinedfileName + " Successfully Converted to PDF", Toast.LENGTH_LONG).show();
+        }
+        else{
             i = 1;
             if (CrackAccessibilityService.document != null) CrackAccessibilityService.document.close();
             CrackAccessibilityService.document = null;
@@ -372,10 +414,9 @@ public class CrackAccessibilityService extends AccessibilityService {
             mediaProjection.stop();
             stopForeground(true);
             stopSelf();
-            showNotification(userDefinedfileName + " Successfully Converted to PDF");
-        }
-        else{
-            Toast.makeText(getApplicationContext(),"Some Error Occurred!", Toast.LENGTH_LONG).show();
+            CrackAccessibilityService.executor.shutdownNow();
+            CrackAccessibilityService.executor=null;
+            Toast.makeText(getApplicationContext(),"Some Error occurred during PDF conversion!", Toast.LENGTH_LONG).show();
         }
     }
 
@@ -482,7 +523,7 @@ public class CrackAccessibilityService extends AccessibilityService {
                     Log.e("++++", "27");
                     out.close();
                     synchronized (CrackAccessibilityService.executor) {
-                        CrackAccessibilityService.executor.notifyAll();
+                        CrackAccessibilityService.executor.notify();
                     }
                     Log.e("++OBJ VALUE++", "" + CrackAccessibilityService.executor);
                     Log.e("++NOTIFIED++", "NOTIFIED");
@@ -502,7 +543,7 @@ public class CrackAccessibilityService extends AccessibilityService {
      *
      * @param name
      */
-    public void convertTopdf(String name) throws Exception {
+    public void convertPngToPdf(String name) throws Exception {
         Log.e("++INSIDE CONVERT++", "INSIDE CONVERT");
         Log.e("++PROCESSING PNG++", "NAME====>" + name);
         Document doc = new Document(PageSize.getRectangle("LEGAL"), 0, 0, 0, 0);
@@ -583,7 +624,7 @@ public class CrackAccessibilityService extends AccessibilityService {
         Log.e("++PAGE NUMBER ADDED++", "PAGE NUMBER ADDED");
     }
 
-    // to continue convert PDFs which is already in converted folder
+    // to continue to convert PDFs which is already in converted folder
     public void continuePDFmerge(String name, String fileName) {
         File filepath = new File(Environment.getExternalStorageDirectory() + MainActivity.destFolder + name + ".pdf");
         File oldFile = new File(Environment.getExternalStorageDirectory() + MainActivity.destFolder + "Converted/" + fileName + "-ConvertedPDF" + ".pdf");
