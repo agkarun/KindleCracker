@@ -613,7 +613,7 @@ public class CrackAccessibilityService extends AccessibilityService {
     public void addPagenumber(Rectangle rect, PdfWriter writer, String pageNumber) {
         Log.e("++INSIDE ADD PAGE NUMBER++", "INSIDE ADD PAGE NUMBER");
         Phrase phrase;
-        if (pageNumber.contentEquals("1") || pageNumber.contentEquals("50") || pageNumber.contentEquals("100")) {
+        if ((Integer.parseInt(pageNumber)%20)==0) {
             phrase = new Phrase(pageNumber + "                       [KindleCracker]");
         } else {
             phrase = new Phrase(pageNumber);
